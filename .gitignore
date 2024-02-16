@@ -1,0 +1,7 @@
+*.png
+.idea/
+output/
+*.pyc
+__pycache__/
+environment/__pycache__/
+agent/__pycache__/

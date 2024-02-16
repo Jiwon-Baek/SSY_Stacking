@@ -1,3 +1,9 @@
+"""
+argparse : 같은 파일을 여러개 다른 option으로 terminal에서 실행시키고자 할 때
+CLI상에서 변수를 입력할 수 있도록 하는 라이브러리
+$ ./train.py -a 0 -b 1
+이런 식으로 CLI에 입력해 실행하면 파일 내부의 a는 0, b는 1로 지정됨
+"""
 import argparse
 
 

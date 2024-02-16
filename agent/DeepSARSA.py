@@ -18,6 +18,10 @@ class SarsaNet(nn.Module):
         self.fc1 = nn.Linear(self.input_dim, 128)
         self.fc2 = nn.Linear(128, self.output_dim)
         self.init_weights()
+    def change_optimizer(self):
+        self.learning_rate = self.learning_rate * 0.99
+        self.optimizer = optim.Adam(self.model.parameters(), lr = self.learning_rate)
+
 
     def init_weights(self):
         for m in self.modules():
@@ -54,9 +58,6 @@ class Agent:
         self.model = SarsaNet(state_size, self.action_size)
         self.learning_rate = 1e-4
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
-    def change_optimizer(self):
-        self.learning_rate = self.learning_rate * 0.99
-        self.optimizer = optim.Adam(self.model.parameters(), lr = self.learning_rate)
 
     def get_action(self, state):
         # print(random.randrange(self.action_size))
@@ -74,13 +75,17 @@ class Agent:
             self.epsilon *= self.epsilon_decay
         self.model.train()
         self.optimizer.zero_grad()
-        q = self.model(s)[0]
-        max_q = torch.amax(q, axis=-1)
+        pred = self.model(s)[0][a]
 
-        target = r + (1-done) * self.discount_factor * max_q
+        # pred : tensor(1, num_pile)
+        # self.model(next_s) : (1, num_pile)
+        # self.model(next_s)[0] : (num_pile)
+        next_q = self.model(next_s)[0][next_a]
+
+        target = r + (1-done) * self.discount_factor * next_q
         loss_function = nn.MSELoss()
 
-        loss = loss_function(target, q)
+        loss = loss_function(target, pred)
         loss.backward()
         self.optimizer.step()
 

@@ -1,7 +1,7 @@
 import random
 import numpy as np
 import pandas as pd
-
+import torch
 import io
 from time import sleep  # Import the sleep function
 from matplotlib import pyplot as plt
@@ -17,11 +17,12 @@ class Plate:
 
 
 class Stacking:
-    def __init__(self, data_src, num_piles=4, max_height=4, device=None):
+    def __init__(self, data_src, num_piles=4, max_height=4, device=None, reward_heuristic=None):
         self.data_src = data_src
         self.num_piles = num_piles
         self.max_height = max_height  # 한 파일에 적치 가능한 강재의 수
         self.device = device
+        self.reward_heuristic = reward_heuristic
 
         if type(self.data_src) is DataGenerator:
             self.df = self.data_src.generate()
@@ -89,25 +90,43 @@ class Stacking:
         return self._get_state()
 
     def _calculate_reward(self, action):
-
+        """
+        reward heuristic 1: # 고정값 = 0 | 10/max_move
+        reward heuristic 2: # 고정값 = 0 | 10/total_move
+        reward heuristic 3: # 고정값 = 2 | 10/max_move
+        reward heuristic 4: # 고정값 = 2 | 10/total_move
+        reward heuristic 5: # penalty | 10/max_move
+        reward heuristic 6: # penalty | 10/total_move
+        reward heuristic 7: # penalty - max_move
+        reward heuristic 8: # penalty - total_move
+        """
         # heuristic적인 penalty를 부여하는 게 낫나?
         # 아니면 그냥 전반적인 상황을 고려하도록 하는게 낫나?
         # 오히려 penalty를 주니까 학습이 잘 안되는 것 같다
         pile = self.piles[action]
         max_move = 0
-        penalty = 0.0
-        if len(pile) == 1:
-            newplate = pile[-1]
-
-            for i, p in enumerate(self.piles):
-                if i != action: # 이번에 올린 pile 말고 다른 pile들을 대상으로 검사
-                    if len(p)>=1: # 한 개 이상 쌓인 pile들을 대상으로 검사
-                        if p[-1].retrieval_date >= newplate.retrieval_date:
-                            # 자신보다 나중에 출고되는 강재가 있는데 새로운 pile 위에 올렸다면
-                            penalty -= 1.0
-            return penalty
-
         total_move = 0
+        penalty = 0.0
+
+        if len(pile) == 1:
+            if self.reward_heuristic in [1, 2]:
+                return 0
+            else:
+
+                newplate = pile[-1]
+                for i, p in enumerate(self.piles):
+                    if i != action:  # 이번에 올린 pile 말고 다른 pile들을 대상으로 검사
+                        if len(p) >= 1:  # 한 개 이상 쌓인 pile들을 대상으로 검사
+                            if p[-1].retrieval_date >= newplate.retrieval_date:
+                                # 자신보다 나중에 출고되는 강재가 있는데 새로운 pile 위에 올렸다면
+                                penalty -= 1.0
+
+
+                if self.reward_heuristic in [3,4]:
+                    return 2
+                else: return penalty
+
+
         for i, plate in enumerate(pile[:-1]):# 마지막으로 적치된 강재(맨 위의 강재)는 리워드 계산 대상에 포함하지 않음
             move = 0
             if i + 1 + max_move >= len(pile):
@@ -120,20 +139,29 @@ class Stacking:
                 max_move = move
             total_move += move
 
+
         if max_move != 0:
             # reward = 1 / max_move  # 예상 크레인 사용 횟수의 역수로 보상 계산
+            # reward = 10 / total_move
             # reward = - max_move
             # reward = - total_move
-            reward = 10 / total_move
+
+            if self.reward_heuristic in [1,3,5]:
+                return 10 / max_move
+            elif self.reward_heuristic in [2,4,6]:
+                return 10 / total_move
+            elif self.reward_heuristic == 7:
+                return penalty - max_move
+            else:
+                return penalty - total_move
         else:
-            # reward = 2
             reward = 10
 
         return reward
     def show_state(self, state):
 
         # 주어진 데이터
-        data = np.flipud(state)
+        data = np.flipud(state.cpu())
 
         # 첫 번째 열을 분리하여 새 열 추가
         # new_col = data[:, 0]
@@ -189,6 +217,7 @@ class Stacking:
 
         # 오늘 도착한 강재와 현재 pile에 적치된 강재의 (투입 날짜) - (현재 날짜) 차이
         state = np.flipud(state)
+        state = torch.tensor(state.copy()).to(self.device)
 
         return state
 

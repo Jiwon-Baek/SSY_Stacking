@@ -6,7 +6,7 @@ from datetime import datetime
 
 from cfg_train import get_cfg
 # from agent.DeepSARSA import *
-from agent import DQN, DeepSARSA
+from agent import DQN, DeepSARSA, DQN_2015
 from environment.data import DataGenerator
 from environment.env import *
 import matplotlib.pyplot as plt
@@ -127,7 +127,7 @@ if __name__ == "__main__":
 
     state = np.random.normal(0, 1, state_size)
 
-    agent = DeepSARSA.Agent(state_size, num_piles, device)
+    agent = DQN_2015.Agent(state_size, num_piles, device)
     # agent = DQN.Agent(state_size, num_piles, device)
 
     scores, episodes, epsilons, crane_moves = [], [], [], []

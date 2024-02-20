@@ -128,11 +128,12 @@ if __name__ == "__main__":
     state = np.random.normal(0, 1, state_size)
 
     agent = DQN_2015.Agent(state_size, num_piles, device)
+    agent.set_params(0.9999, 1e-4, 'SGD')
     # agent = DQN.Agent(state_size, num_piles, device)
 
     scores, episodes, epsilons, crane_moves = [], [], [], []
 
-    EPISODES = 100
+    EPISODES = 1000
     for e in range(EPISODES):
         # Initialize
         done = False

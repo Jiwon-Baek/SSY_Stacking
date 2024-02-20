@@ -45,15 +45,12 @@ class GUI():
 
         # tk.after는 인자로 받은 함수를 계속해서 callback함
         # 재귀적으로 호출함으로써 계속 동작하게 만들 수 있음
-        if self.current_image >= self.n_show:
+        if self.current_image >= len(self.tk_images):
             self.current_image = 0
 
-        self.tk.after(100, self.update)
-        # if self.current_image == 0:
-        #     self.tk.after(1000, self.update)  # Pause for 2000 milliseconds (2 seconds)
-        # else:
-        #     self.tk.after(5000, self.update)  # Pause for 2000 milliseconds (2 seconds)
+        # self.tk.after(100, self.update)
+        if self.current_image == 0:
+            self.tk.after(5000, self.update)  # Pause for 2000 milliseconds (2 seconds)
+        else:
+            self.tk.after(500, self.update)  # Pause for 2000 milliseconds (2 seconds)
 
-
-if __name__ == "__main__":
-    gui = GUI()

@@ -160,8 +160,8 @@ if __name__ == "__main__":
 
     plt.figure()
     plt.plot(episodes, scores, label='score')
-    plt.plot(episodes, epsilons, label='epsilon(1:20)')
-    plt.plot(episodes, crane_moves, label='crane move(1:10)')
+    plt.plot(episodes, epsilons, label='epsilon(1:100)')
+    plt.plot(episodes, crane_moves, label='crane move')
     plt.title('DQN')
     plt.legend()
     plt.show()

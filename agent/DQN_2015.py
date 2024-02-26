@@ -9,7 +9,9 @@ import torch.nn as nn
 from torch.optim.lr_scheduler import StepLR
 import numpy as np
 import random
+from collections import namedtuple, deque
 
+BATCH_SIZE = 4
 
 class DQNnet(nn.Module):
     def __init__(self, state_size, output_dim):
@@ -41,7 +43,21 @@ class DQNnet(nn.Module):
         # print(x.size())
         return x
 
+Transition = namedtuple('Transition',
+                        ('state', 'action', 'next_state', 'reward'))
+class ReplayMemory(object):
+    def __init__(self, capacity):
+        self.memory = deque([], maxlen = capacity)
+        # collections 라이브러리의 deque를 사용하면 일정한 크기를 갖는 메모리 생성 가능
+    def push(self, *args):
+        """Save a transition"""
+        self.memory.append(Transition(*args))
 
+    def sample(self, batch_size):
+        return random.sample(self.memory, batch_size)
+
+    def __len__(self):
+        return len(self.memory)
 class Agent:
     def __init__(self, state_size, action_size, device):
 
@@ -58,6 +74,7 @@ class Agent:
         self.update_period = 4
         self.num_step = 0
         self.num_sample = 4
+        self.memory = ReplayMemory(capacity=10000)
 
         # learning parameters
         self.main_net = DQNnet(state_size, self.action_size).to(device)
@@ -71,8 +88,14 @@ class Agent:
         self.learning_rate = _learning_rate
         if _optimizer_type == 'SGD':
             self.optimizer = optim.SGD(self.main_net.parameters(), lr=self.learning_rate)
+        elif _optimizer_type == 'AdamW':
+            self.optimizer = optim.AdamW(self.main_net.parameters(), lr=self.learning_rate)
         else:
             self.optimizer = optim.Adam(self.main_net.parameters(), lr=self.learning_rate)
+
+    def reset_memory(self):
+        self.replay_memory = []
+
 
 
     def get_action(self, state):
@@ -87,6 +110,9 @@ class Agent:
             return torch.argmax(pred_q).item()
 
     def train(self, s, a, r, next_s, next_a, done):
+
+
+
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
         self.main_net.train()
@@ -94,6 +120,10 @@ class Agent:
         # 마지막 출력층 개수인 10과 실제 MSE 계산값의 차원(())이 안 맞아서 문제가 생기는 듯?
         self.replay_memory.append({'state':s, 'action':a, 'reward':r, 'next state':next_s})
 
+        # if len(self.memory)<BATCH_SIZE:
+        #     return
+        # transitions = self.memory.sample(BATCH_SIZE)
+        # batch = Transition(*zip(*transitions))
 
         # Experience Replay
         indices = torch.randint(0, len(self.replay_memory), (self.num_sample,))
@@ -121,6 +151,9 @@ class Agent:
         if self.num_step % self.update_period == (self.update_period -1):
             self.target_net = copy.deepcopy(self.main_net)
         self.num_step +=1
+
+    def update_target_model(self):
+        self.target_net.load_state_dict(self.main_net.state_dict())
 
     # def save_model(self, e, file_dir):
     #     torch.save({"episode": e,

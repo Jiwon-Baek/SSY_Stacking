@@ -103,30 +103,35 @@ class Stacking:
         # heuristic적인 penalty를 부여하는 게 낫나?
         # 아니면 그냥 전반적인 상황을 고려하도록 하는게 낫나?
         # 오히려 penalty를 주니까 학습이 잘 안되는 것 같다
+
+
+        """ 1. 만약 새로운 pile에 적재를 시작했다면, 다른 모든 pile 중에는 대안이 없었는가?"""
         pile = self.piles[action]
+
+
         max_move = 0
         total_move = 0
         penalty = 0.0
 
         if len(pile) == 1:
-            if self.reward_heuristic in [1, 2]:
-                return 0
-            else:
+            newplate = pile[-1]
+            for i, p in enumerate(self.piles):
+                if i != action:  # 이번에 올린 pile 말고 다른 pile들을 대상으로 검사
+                    if len(p) >= 1:  # 한 개 이상 쌓인 pile들을 대상으로 검사
+                        if p[-1].retrieval_date >= newplate.retrieval_date:
+                            # 자신보다 나중에 출고되는 강재가 있는데 새로운 pile 위에 올렸다면
+                            penalty -= 10.0
 
-                newplate = pile[-1]
-                for i, p in enumerate(self.piles):
-                    if i != action:  # 이번에 올린 pile 말고 다른 pile들을 대상으로 검사
-                        if len(p) >= 1:  # 한 개 이상 쌓인 pile들을 대상으로 검사
-                            if p[-1].retrieval_date >= newplate.retrieval_date:
-                                # 자신보다 나중에 출고되는 강재가 있는데 새로운 pile 위에 올렸다면
-                                penalty -= 1.0
+            """ 만약에 penalty를 받지 않았다면 그 판단이 최선이었다는 것이므로 큰 보상을 줌"""
+            if penalty == 0.0:
+                return 10
+            else: # penalty가 있다면
+                if self.reward_heuristic in [1, 2, 3, 4]:
+                    return 0 # 고정 penalty
+                else:
+                    return penalty # 다른 선택지의 수에 비례해서 더 증가하는 penalty
 
-
-                if self.reward_heuristic in [3,4]:
-                    return 2
-                else: return penalty
-
-
+        """ 2. 만약 이미 쌓아 올린 pile에 추가했다면, 시간 간섭이 존재하지 않는가? """
         for i, plate in enumerate(pile[:-1]):# 마지막으로 적치된 강재(맨 위의 강재)는 리워드 계산 대상에 포함하지 않음
             move = 0
             if i + 1 + max_move >= len(pile):
@@ -155,7 +160,7 @@ class Stacking:
             else:
                 return penalty - total_move
         else:
-            reward = 10
+            reward = 2
 
         return reward
     def show_state(self, state):

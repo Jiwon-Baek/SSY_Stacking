@@ -122,19 +122,23 @@ if __name__ == "__main__":
 
     data_generator = DataGenerator(num_plates)
     env = Stacking(data_generator, num_piles=num_piles, max_height=max_height,
-                   device=device, reward_heuristic=1)
+                   device=device, reward_heuristic=2)
     state_size = (max_height, (num_piles + 1))
 
     state = np.random.normal(0, 1, state_size)
 
+    # agent = DeepSARSA.Agent(state_size, num_piles, device)
+    # agent = DQN.Agent(state_size, num_piles, device)
     agent = DQN_2015.Agent(state_size, num_piles, device)
-    agent.set_params(0.9999, 1e-4, 'SGD')
+    agent.set_params(0.99, 1e-4, 'SGD')
     # agent = DQN.Agent(state_size, num_piles, device)
 
     scores, episodes, epsilons, crane_moves = [], [], [], []
 
-    EPISODES = 1000
+    EPISODES = 100
     for e in range(EPISODES):
+        if e == 50:
+            print('Debug Mode')
         # Initialize
         done = False
         score = 0
@@ -155,7 +159,7 @@ if __name__ == "__main__":
                 if score > max_score:
                     max_score = score
                     # agent.change_optimizer()
-
+                agent.reset_memory()
                 episodes.append(e)
                 epsilons.append(agent.epsilon * 100.0)
 
@@ -163,7 +167,7 @@ if __name__ == "__main__":
     plt.plot(episodes, scores, label='score')
     plt.plot(episodes, epsilons, label='epsilon(1:100)')
     plt.plot(episodes, crane_moves, label='crane move')
-    plt.title('DQN')
+    plt.title('DQN 2015')
     plt.legend()
     plt.show()
 
